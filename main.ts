@@ -40,7 +40,9 @@ const program = Effect.gen(function* () {
     yield* Effect.log("🤖 Bot running in development mode...");
     yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
+    const webhookUrl = `https://deno-telegrambot.deno.dev/`;
     yield* Effect.log("🤖 Bot running in webhook mode...");
+    yield* Effect.promise(() => bot.api.setWebhook(webhookUrl));
     Deno.serve((req) => webhookCallback(bot, "std/http")(req));
   }
 }).pipe(Effect.catchAll((e) => Effect.logError(`Bot error: ${e}`)));
