@@ -37,14 +37,14 @@ const program = Effect.gen(function* () {
   );
 
   if (ENVIRONMENT === "development") {
-    yield* Effect.log("🤖 Bot running in development mode...");
+    yield* Effect.log("🤖 Bot running in development mode...",BOT_TOKEN);
     Deno.addSignalListener("SIGINT", async () => {
       await bot.stop();
       Deno.exit(0);
     });
     yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
-    yield* Effect.log("🤖 Bot running in webhook mode...");
+    yield* Effect.log("🤖 Bot running in webhook mode...",BOT_TOKEN);
     yield* Effect.sync(() =>
       Deno.serve((req) => webhookCallback(bot, "std/http")(req))
     );
