@@ -38,24 +38,16 @@ const program = Effect.gen(function* () {
 
   if (ENVIRONMENT === "development") {
     yield* Effect.log("🤖 Bot running in development mode...");
-
-    // Graceful shutdown
     Deno.addSignalListener("SIGINT", async () => {
       await bot.stop();
       Deno.exit(0);
     });
-
     yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
-    yield* Effect.promise(() => bot.api.setWebhook("http://localhost:8000")).pipe(
-      Effect.retry(
-        Schedule.exponential(Duration.seconds(1)).pipe(
-          Schedule.intersect(Schedule.recurs(5)), // max 5 retry
-        ),
-      ),
+    yield* Effect.log("🤖 Bot running in webhook mode...");
+    yield* Effect.sync(() =>
+      Deno.serve((req) => webhookCallback(bot, "std/http")(req))
     );
-    yield* Effect.log(`🤖 Bot running in webhook mode`);
-    yield* Effect.sync(() => Deno.serve((req) => webhookCallback(bot, "std/http")(req)));
   }
 }).pipe(
   Effect.catchAll((e) => Effect.logError(`Bot error: ${e}`)),
