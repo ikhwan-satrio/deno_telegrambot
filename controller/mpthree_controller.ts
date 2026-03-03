@@ -102,7 +102,6 @@ export class MpThreeController {
         "FetchError",
         () => Effect.promise(() => c.reply("An error occurred while processing your request.")),
       ),
-      // Selalu hapus waiting message
       Effect.ensuring(MpThreeController.deleteWaiting(c, waiting.message_id)),
     );
 

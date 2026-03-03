@@ -115,7 +115,6 @@ export class MessageController {
               c.reply("An error occurred while processing your request.")
             ),
         ),
-        // Selalu hapus waiting message
         Effect.ensuring(MessageController.deleteWaiting(c, waiting.message_id)),
       );
 
