@@ -17,11 +17,9 @@ const startHandler = (ctx: Context) =>
     )
   );
 
-const mp3Handler = (ctx: Context) =>
-  Effect.promise(() => Promise.resolve(MpThreeController.main(ctx)));
+const mp3Handler = (ctx: Context) => Effect.promise(() => Promise.resolve(MpThreeController.main(ctx)));
 
-const messageHandler = (ctx: Context) =>
-  Effect.promise(() => Promise.resolve(MessageController.main(ctx)));
+const messageHandler = (ctx: Context) => Effect.promise(() => Promise.resolve(MessageController.main(ctx)));
 
 bot.command("start", (c) => Effect.runPromise(startHandler(c)));
 bot.command("mp3", (c) => Effect.runPromise(mp3Handler(c)));
@@ -38,7 +36,7 @@ const program = Effect.gen(function* () {
     ])
   );
 
-  yield* Effect.promise(() => bot.api.deleteWebhook());
+  yield* Effect.promise(() => bot.api.deleteWebhook({ drop_pending_updates: true }));
 
   if (ENVIRONMENT === "development") {
     yield* Effect.log("🤖 Bot running in development mode...");
@@ -57,7 +55,7 @@ const program = Effect.gen(function* () {
     yield* Effect.sync(() => Deno.serve((req) => webhookCallback(bot, "std/http")(req)));
   }
 }).pipe(
-  Effect.catchAll((e) => Effect.logError(`Bot error: ${e}`))
+  Effect.catchAll((e) => Effect.logError(`Bot error: ${e}`)),
 );
 
 Effect.runPromise(program);
