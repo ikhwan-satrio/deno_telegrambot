@@ -36,8 +36,6 @@ const program = Effect.gen(function* () {
     ])
   );
 
-  yield* Effect.promise(() => bot.api.deleteWebhook({ drop_pending_updates: true }));
-
   if (ENVIRONMENT === "development") {
     yield* Effect.log("🤖 Bot running in development mode...");
 
