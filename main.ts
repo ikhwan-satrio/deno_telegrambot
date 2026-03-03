@@ -33,9 +33,12 @@ const program = Effect.gen(function* () {
   yield* Effect.log("🤖 Setting bot commands...");
   yield* setCommandsEffect;
 
+  // Selalu reset webhook dulu
+  yield* Effect.promise(() => bot.api.deleteWebhook());
+
   if (ENVIRONMENT === "development") {
     yield* Effect.log("🤖 Bot running in development mode...");
-    yield* Effect.promise(() => bot.start());
+    yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
     yield* Effect.log("🤖 Bot running in webhook mode...");
     Deno.serve((req) => webhookCallback(bot, "std/http")(req));
