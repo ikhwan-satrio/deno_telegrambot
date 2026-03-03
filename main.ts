@@ -1,5 +1,5 @@
 import { Bot, Context, webhookCallback } from "grammy/mod.ts";
-import { Effect } from "effect";
+import { Effect,Duration,Schedule } from "effect";
 import { MessageController } from "@/controller/message_controller.ts";
 import { MpThreeController } from "@/controller/mpthree_controller.ts";
 
@@ -47,6 +47,13 @@ const program = Effect.gen(function* () {
 
     yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
+    yield* Effect.promise(() => bot.api.setWebhook("http://localhost:8000")).pipe(
+      Effect.retry(
+        Schedule.exponential(Duration.seconds(1)).pipe(
+          Schedule.intersect(Schedule.recurs(5)), // max 5 retry
+        ),
+      ),
+    );
     yield* Effect.log(`🤖 Bot running in webhook mode`);
     yield* Effect.sync(() => Deno.serve((req) => webhookCallback(bot, "std/http")(req)));
   }
