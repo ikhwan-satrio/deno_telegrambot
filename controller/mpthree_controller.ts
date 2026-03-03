@@ -1,82 +1,111 @@
 import { composeHandler } from "@/utils/decorators/defineMethod.ts";
 import { Context } from "grammy/mod.ts";
 import type { TikTokApiResponse } from "@/types.ts";
+import { Data, Duration, Effect } from "effect";
+
+class FetchError extends Data.TaggedError("FetchError")<{
+  message: string;
+}> {}
+
+class TokenError extends Data.TaggedError("TokenError")<{
+  message: string;
+}> {}
+
+class ApiError extends Data.TaggedError("ApiError")<{
+  message: string;
+  code: number;
+}> {}
+
+class TimeoutError extends Data.TaggedError("TimeoutError") {}
 
 export class MpThreeController {
-  static main = composeHandler([], async (c: Context): Promise<void> => {
-    let message;
-    try {
-      message = await c.reply("wait longitude...");
-      const body = c.message?.text?.split(" ").slice(1).join(" "); // Join the remaining parts to form the complete URL
+  static deleteWaiting = (c: Context, messageId: number) =>
+    Effect.tryPromise({
+      try: () => c.api.deleteMessage(c.chatId as number, messageId),
+      catch: (e) => new FetchError({ message: `delete failed: ${e}` }),
+    }).pipe(Effect.ignore);
 
-      // Create an abort controller with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+  static fetchMpThree = (body: string) =>
+    Effect.gen(function* () {
+      const res = yield* Effect.tryPromise({
+        try: () =>
+          fetch(
+            `https://tiktok-download-without-watermark.p.rapidapi.com/analysis?url=${body}&hd=0`,
+            {
+              headers: {
+                "x-rapidapi-key": Deno.env.get("RAPIDAPI_KEY") as string,
+                "x-rapidapi-host": "tiktok-download-without-watermark.p.rapidapi.com",
+              },
+            },
+          ),
+        catch: (e) =>
+          e instanceof DOMException && e.name === "AbortError"
+            ? new TimeoutError()
+            : new FetchError({ message: String(e) }),
+      });
 
-      const res = await fetch(
-        `https://tiktok-download-without-watermark.p.rapidapi.com/analysis?url=${body}&hd=0`,
-        {
-          headers: {
-            "x-rapidapi-key": Deno.env.get("RAPIDAPI_KEY") as string,
-            "x-rapidapi-host":
-              "tiktok-download-without-watermark.p.rapidapi.com",
-          },
-          signal: controller.signal
-        },
-      );
+      if (!res.ok) yield* Effect.fail(new FetchError({ message: `status ${res.status}` }));
 
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        throw new Error(`API request failed with status ${res.status}`);
-      }
-
-      const data = await res.json() as TikTokApiResponse;
+      const data = yield* Effect.tryPromise({
+        try: () => res.json() as Promise<TikTokApiResponse>,
+        catch: () => new FetchError({ message: `parse error` }),
+      });
 
       if (data.message) {
-        await c.reply("Oops maaf token untuk convert video telah habis");
-        if (message?.message_id) {
-          await c.api.deleteMessage(c.chatId as number, message.message_id);
-        }
-        return;
+        yield* Effect.fail(new TokenError({ message: data.message }));
       }
 
       if (data.code < 0) {
-        await c.reply(`Oops ${data.msg}`);
-        if (message?.message_id) {
-          await c.api.deleteMessage(c.chatId as number, message.message_id);
-        }
-        return;
+        yield* Effect.fail(new ApiError({ message: data.msg, code: data.code }));
       }
+
+      return data;
+    }).pipe(
+      Effect.timeout(Duration.seconds(30)),
+      Effect.catchTag("TimeoutError", () => Effect.fail(new TimeoutError())),
+    );
+
+  static main = composeHandler([], async (c: Context): Promise<void> => {
+    const waiting = await c.reply("wait longitude...");
+    const body = c.message?.text?.split(" ").slice(1).join(" "); // Join the remaining parts to form the complete URL
+
+    const program = Effect.gen(function* () {
+      const data = yield* MpThreeController.fetchMpThree(body!);
 
       if (data.data.music) {
-        await c.api.sendAudio(c.chatId as number, data.data.music, {
-          caption: `${body}\n\n@TiktokConverterWanto\nCompleted! ✅`,
-          title: "TikTok Audio", // opsional
-          performer: "TikTok", // opsional
-        });
-        if (message?.message_id) {
-          await c.api.deleteMessage(c.chatId as number, message.message_id);
+        yield* Effect.promise(() =>
+          c.api.sendAudio(c.chatId as number, data.data.music, {
+            caption: `${body}\n\n@TiktokConverterWanto\nCompleted! ✅`,
+            title: "TikTok Audio", // opsional
+            performer: "TikTok", // opsional
+          })
+        );
+        if (waiting.message_id) {
+          yield* Effect.promise(() => c.api.deleteMessage(c.chatId as number, waiting.message_id));
         }
       }
-    } catch (error) {
-      console.error("Error processing request:", error);
+    }).pipe(
+      Effect.catchTag(
+        "TokenError",
+        () => Effect.promise(() => c.reply("Oops maaf token untuk convert video telah habis")),
+      ),
+      Effect.catchTag(
+        "TimeoutError",
+        () =>
+          Effect.promise(() =>
+            c.reply(
+              "Request timeout. The TikTok API is taking too long to respond.",
+            )
+          ),
+      ),
+      Effect.catchTag(
+        "FetchError",
+        () => Effect.promise(() => c.reply("An error occurred while processing your request.")),
+      ),
+      // Selalu hapus waiting message
+      Effect.ensuring(MpThreeController.deleteWaiting(c, waiting.message_id)),
+    );
 
-      // Check if the error is due to timeout
-      if (error instanceof Error && error.name === 'AbortError') {
-        await c.reply("Request timeout. The TikTok API is taking too long to respond.");
-      } else {
-        await c.reply("An error occurred while processing your request.");
-      }
-
-      // Delete the waiting message if it exists
-      if (message?.message_id) {
-        try {
-          await c.api.deleteMessage(c.chatId as number, message.message_id);
-        } catch (deleteError) {
-          console.error("Failed to delete waiting message:", deleteError);
-        }
-      }
-    }
+    await Effect.runPromise(program);
   });
 }
