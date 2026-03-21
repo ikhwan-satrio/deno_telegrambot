@@ -11,6 +11,7 @@
   "tasks": {
     "dev": "deno run --watch --env-file -A main.ts"
   },
+  "nodeModulesDir": "auto",
   "fmt": {
     "lineWidth": 120,
     "indentWidth": 2,

@@ -1,5 +1,5 @@
 import { Bot, Context, webhookCallback } from "grammy/mod.ts";
-import { Effect,Duration,Schedule } from "effect";
+import { Duration, Effect, Schedule } from "effect";
 import { MessageController } from "@/controller/message_controller.ts";
 import { MpThreeController } from "@/controller/mpthree_controller.ts";
 
@@ -37,17 +37,15 @@ const program = Effect.gen(function* () {
   );
 
   if (ENVIRONMENT === "development") {
-    yield* Effect.log("🤖 Bot running in development mode...",BOT_TOKEN);
+    yield* Effect.log("🤖 Bot running in development mode...", BOT_TOKEN);
     Deno.addSignalListener("SIGINT", async () => {
       await bot.stop();
       Deno.exit(0);
     });
     yield* Effect.promise(() => bot.start({ drop_pending_updates: true }));
   } else {
-    yield* Effect.log("🤖 Bot running in webhook mode...",BOT_TOKEN);
-    yield* Effect.sync(() =>
-      Deno.serve((req) => webhookCallback(bot, "std/http")(req))
-    );
+    yield* Effect.log("🤖 Bot running in webhook mode...", BOT_TOKEN);
+    yield* Effect.sync(() => Deno.serve((req) => webhookCallback(bot, "std/http")(req)));
   }
 }).pipe(
   Effect.catchAll((e) => Effect.logError(`Bot error: ${e}`)),
