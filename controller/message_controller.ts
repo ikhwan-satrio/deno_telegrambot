@@ -32,8 +32,7 @@ export class MessageController {
             {
               headers: {
                 "x-rapidapi-key": Deno.env.get("RAPIDAPI_KEY") as string,
-                "x-rapidapi-host":
-                  "tiktok-download-without-watermark.p.rapidapi.com",
+                "x-rapidapi-host": "tiktok-download-without-watermark.p.rapidapi.com",
               },
             },
           ),
@@ -68,19 +67,16 @@ export class MessageController {
     [tiktokFormatMiddleware],
     async (c: Context): Promise<void> => {
       const waiting = await c.reply("wait longitude...");
-      const body = c.message?.text?.split(" ")[0];
+      const tiktokRegex = /https?:\/\/(vm|vt)\.tiktok\.com\/[^\s]*/;
+      const body = c.message?.text?.split(" ").find((b) => tiktokRegex.test(b));
 
       const program = Effect.gen(function* () {
         const data = yield* MessageController.fetchTiktok(body!);
 
         if (data.data?.images) {
-          const imageMap = data.data.images.map((image: string) =>
-            InputMediaBuilder.photo(image)
-          );
+          const imageMap = data.data.images.map((image: string) => InputMediaBuilder.photo(image));
           yield* Effect.promise(() => c.replyWithMediaGroup(imageMap));
-          yield* Effect.promise(() =>
-            c.reply(`${body}\n\n@TiktokConverterWanto\nCompleted! ✅`)
-          );
+          yield* Effect.promise(() => c.reply(`${body}\n\n@TiktokConverterWanto\nCompleted! ✅`));
           return;
         }
 
@@ -94,10 +90,7 @@ export class MessageController {
       }).pipe(
         Effect.catchTag(
           "TokenError",
-          () =>
-            Effect.promise(() =>
-              c.reply("Oops maaf token untuk convert video telah habis")
-            ),
+          () => Effect.promise(() => c.reply("Oops maaf token untuk convert video telah habis")),
         ),
         Effect.catchTag(
           "TimeoutError",
@@ -110,15 +103,12 @@ export class MessageController {
         ),
         Effect.catchTag(
           "FetchError",
-          () =>
-            Effect.promise(() =>
-              c.reply("An error occurred while processing your request.")
-            ),
+          () => Effect.promise(() => c.reply("An error occurred while processing your request.")),
         ),
         Effect.ensuring(MessageController.deleteWaiting(c, waiting.message_id)),
       );
 
-      await Effect.runPromise(program)
+      await Effect.runPromise(program);
     },
   );
 }

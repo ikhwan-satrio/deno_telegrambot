@@ -1,7 +1,8 @@
 import { composeHandler } from "@/utils/decorators/defineMethod.ts";
 import { Context } from "grammy/mod.ts";
 import type { TikTokApiResponse } from "@/types.ts";
-import { Data, Duration, Effect } from "effect";
+import { Data, Duration, Effect, Layer } from "effect";
+import { MpThreeService } from "../services/mpthree.ts";
 
 class FetchError extends Data.TaggedError("FetchError")<{
   message: string;
@@ -70,7 +71,7 @@ export class MpThreeController {
     const body = c.message?.text?.split(" ").slice(1).join(" "); // Join the remaining parts to form the complete URL
 
     const program = Effect.gen(function* () {
-      const data = yield* MpThreeController.fetchMpThree(body!);
+      const data = yield MpThreeService;
 
       if (data.data.music) {
         yield* Effect.promise(() =>

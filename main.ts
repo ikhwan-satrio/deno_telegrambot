@@ -18,7 +18,6 @@ const startHandler = (ctx: Context) =>
   );
 
 const mp3Handler = (ctx: Context) => Effect.promise(() => Promise.resolve(MpThreeController.main(ctx)));
-
 const messageHandler = (ctx: Context) => Effect.promise(() => Promise.resolve(MessageController.main(ctx)));
 
 bot.command("start", (c) => Effect.runPromise(startHandler(c)));
