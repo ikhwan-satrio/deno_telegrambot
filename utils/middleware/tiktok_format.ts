@@ -1,13 +1,13 @@
 import { Context } from "grammy";
 
-export async function tiktokFormatMiddleware(c: Context): Promise<void> {
-  if (
-    c.message?.text &&
-    !RegExp("https?:\/\/(vt|vn|vm)\.tiktok\.com\/[a-zA-Z0-9]+").test(
-      c.message.text.split(" ")[0],
-    )
-  ) {
+const tiktokRegex = /https?:\/\/(vt|vn|vm)\.tiktok\.com\/[a-zA-Z0-9]+/;
+
+export async function tiktokFormatMiddleware(c: Context) {
+  const text = c.message?.text ?? "";
+  const hasUrl = text.split(" ").some((word) => tiktokRegex.test(word));
+
+  if (!hasUrl) {
     await c.reply("Oops wrong format!");
-    throw new Error("Invalid TikTok link"); // Hentikan eksekusi
+    throw new Error("Invalid TikTok link");
   }
 }
