@@ -1,4 +1,4 @@
-import { Context } from "grammy/mod.ts";
+import { Context } from "grammy";
 
 export function replyMiddleware(c: Context) {
   if (c.message?.reply_to_message) {

@@ -1,4 +1,4 @@
-import { Context } from "grammy/mod.ts";
+import { Context } from "grammy";
 
 export async function tiktokFormatMiddleware(c: Context): Promise<void> {
   if (

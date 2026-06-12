@@ -1,5 +1,5 @@
 import { composeHandler } from "@/utils/decorators/defineMethod.ts";
-import { Context } from "grammy/mod.ts";
+import { Context } from "grammy";
 import { Effect } from "effect";
 import { FetchError, MpThreeService } from "../services/mpthree.ts";
 

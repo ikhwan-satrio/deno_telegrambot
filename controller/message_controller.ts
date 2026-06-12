@@ -1,8 +1,8 @@
 import { composeHandler } from "@/utils/decorators/defineMethod.ts";
 import { tiktokFormatMiddleware } from "@/utils/middleware/tiktok_format.ts";
 
-import type { Context } from "grammy/mod.ts";
-import { InputMediaBuilder } from "grammy/mod.ts";
+import type { Context } from "grammy";
+import { InputMediaBuilder } from "grammy";
 import { TikTokApiResponse } from "@/types.ts";
 import { Data, Duration, Effect } from "effect";
 

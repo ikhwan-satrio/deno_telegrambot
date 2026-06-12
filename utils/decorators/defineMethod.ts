@@ -1,4 +1,4 @@
-import type { Context } from "grammy/mod.ts";
+import type { Context } from "grammy";
 
 export type Middleware = (ctx: Context) => void | Promise<void>;
 export type Handler = (ctx: Context) => void | Promise<void>;
